@@ -85,3 +85,40 @@ export function volumeRows(m3) {
     { label: 'Litres', value: `${fmt(litres(m3), 0)} L` },
   ];
 }
+
+// ---- several rectangles added together (main length × width plus "Area 2", "Area 3", …) ----
+
+export const AREAS = { length: 'length', width: 'width' };
+
+export function areaParts(v) {
+  return [[v.length, v.width], ...(v.extraAreas || []).map((a) => [a.length, a.width])];
+}
+
+export function totalArea(v) {
+  return areaParts(v).reduce((sum, [l, w]) => sum + l * w, 0);
+}
+
+// "Area = 12 ft × 10 ft + 5 ft × 4 ft = 140 ft²"
+export function areaStep(v, s, label = 'Area') {
+  const parts = areaParts(v);
+  const terms = parts.map(([l, w]) => `${len(l, s)} × ${len(w, s)}`).join(' + ');
+  return `${label} = ${terms} = ${area(totalArea(v), s)}`;
+}
+
+// ---- optional price ----
+
+export const COST_GROUP = { id: 'cost', legend: 'Cost (optional)' };
+
+export function priceField(label, labelMetric) {
+  return {
+    name: 'price',
+    group: 'cost',
+    type: 'money',
+    label,
+    labelMetric,
+    optional: true,
+    default: null,
+    min: 0,
+    help: 'Add the price to see an estimated total.',
+  };
+}

@@ -1,5 +1,5 @@
 import { fmt, fmtUp, ceilTo, plural, withUnit } from '../lib/units.mjs';
-import { lengthField, extraField, systemOf, other, len, area, pct, factor } from './_shared.mjs';
+import { lengthField, extraField, systemOf, other, area, pct, factor, AREAS, totalArea, areaStep, priceField, COST_GROUP } from './_shared.mjs';
 
 const TILE_UNITS = ['in', 'cm', 'mm', 'ft', 'm'];
 const tileLen = (m, s) => withUnit(m, 'length', s === 'metric' ? 'cm' : 'in');
@@ -23,7 +23,9 @@ export default {
   groups: [
     { id: 'area', legend: 'Area to tile' },
     { id: 'tile', legend: 'Tile' },
+    COST_GROUP,
   ],
+  areas: AREAS,
   inputs: [
     lengthField('length', 'Area length', 10, 3, { group: 'area' }),
     lengthField('width', 'Area width', 8, 2.4, { group: 'area', help: 'For a wall, use its width and height.' }),
@@ -60,10 +62,13 @@ export default {
       group: 'tile',
     }),
     { name: 'perBox', group: 'tile', type: 'count', label: 'Tiles per box', optional: true, default: 10, min: 1, help: 'Leave blank if you are buying single tiles.' },
+    priceField('Price per tile'),
   ],
 
+  cost: (r) => ({ count: r.hasBoxes ? r.boxes * r.perBox : r.tiles, unit: 'tiles' }),
+
   compute(v) {
-    const surface = v.length * v.width;
+    const surface = totalArea(v);
     const tileFace = v.tileLength * v.tileWidth;
     const cell = (v.tileLength + v.joint) * (v.tileWidth + v.joint); // one tile plus its share of joint
     const tilesExact = surface / cell;
@@ -87,7 +92,7 @@ export default {
       );
     }
     const steps = [
-      `Area = ${len(r.length, s)} × ${len(r.width, s)} = ${area(r.surface, s)}`,
+      areaStep(r, s),
       `Space per tile = (${tileLen(r.tileLength, s)} + ${jointLen(r.joint, s)}) × (${tileLen(r.tileWidth, s)} + ${jointLen(r.joint, s)}) = ${tileArea(r.cell, s)}`,
       `Tiles = ${area(r.surface, s)} (${tileArea(r.surface, s)}) ÷ ${tileArea(r.cell, s)} = ${fmt(r.tilesExact, 2)}`,
       `With ${pct(r.waste)} waste = ${fmt(r.tilesExact, 2)} × ${factor(r.waste)} = ${fmtUp(r.tilesWithWaste, 2)}, rounded up to ${fmt(r.tiles, 0)}`,

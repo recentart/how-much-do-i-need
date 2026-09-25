@@ -1,5 +1,5 @@
 import { fromBase, fmt, fmtUp, ceilTo, LITRES_PER_GALLON, plural } from '../lib/units.mjs';
-import { lengthField, extraField, systemOf, len, area, pct, factor } from './_shared.mjs';
+import { lengthField, extraField, systemOf, len, area, pct, factor, priceField, COST_GROUP } from './_shared.mjs';
 
 // Smallest total of metric tins (10, 5, 2.5, 1 L) that covers the litres needed; ties go to fewer tins.
 export function bestTins(litresNeeded) {
@@ -60,6 +60,7 @@ export default {
     { id: 'room', legend: 'Room size' },
     { id: 'openings', legend: 'Doors and windows' },
     { id: 'paint', legend: 'Paint' },
+    COST_GROUP,
   ],
   inputs: [
     lengthField('length', 'Room length', 12, 3.6, { group: 'room' }),
@@ -102,7 +103,11 @@ export default {
       help: 'Printed on the can. 350 ft² per gallon (8.6 m² per litre) is a cautious figure for interior wall paint.',
     },
     extraField('waste', 'Extra for waste and touch-ups', 10, 'Covers paint left in trays and rollers, spills and touch-ups.', { group: 'paint' }),
+    priceField('Price per gallon', 'Price per litre'),
   ],
+
+  cost: (r, ctx) =>
+    ctx.system === 'metric' ? { count: r.tins.total, unit: 'litres' } : { count: r.quarts / 4, unit: 'gallons' },
 
   compute(v) {
     const wallArea = 2 * (v.length + v.width) * v.height;

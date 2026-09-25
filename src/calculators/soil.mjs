@@ -5,7 +5,11 @@ import {
   depthField,
   extraField,
   systemOf,
-  len,
+  AREAS,
+  totalArea,
+  areaStep,
+  priceField,
+  COST_GROUP,
   area,
   depth,
   volume,
@@ -35,7 +39,9 @@ export default {
   groups: [
     { id: 'area', legend: 'Bed size' },
     { id: 'buy', legend: 'Buying' },
+    COST_GROUP,
   ],
+  areas: AREAS,
   inputs: [
     lengthField('length', 'Bed length', 8, 2.4, { group: 'area' }),
     lengthField('width', 'Bed width', 4, 1.2, { group: 'area' }),
@@ -54,10 +60,13 @@ export default {
       default: { us: [1.5, 'ft3'], metric: [50, 'L'] },
       help: 'Leave blank if you are buying in bulk.',
     },
+    priceField('Price per bag'),
   ],
 
+  cost: (r) => (r.hasBags ? { count: r.bags, unit: 'bags' } : null),
+
   compute(v) {
-    const surface = v.length * v.width;
+    const surface = totalArea(v);
     const vol = surface * v.depth;
     const volWithExtra = vol * (1 + v.extra / 100);
     const hasBags = v.bagSize != null;
@@ -90,7 +99,7 @@ export default {
     );
 
     const steps = [
-      `Area = ${len(r.length, s)} × ${len(r.width, s)} = ${area(r.surface, s)}`,
+      areaStep(r, s),
       `Volume = ${area(r.surface, s)} × ${depth(r.depth, s)} deep = ${volumeSimple(r.vol, s)}${s === 'us' ? ` = ${fmtAuto(cuYd(r.vol))} yd³ (27 ft³ per yd³)` : ''}`,
       `With ${pct(r.extra)} extra = ${volumeSimple(r.vol, s)} × ${factor(r.extra)} = ${volumeSimple(r.volWithExtra, s)}`,
     ];

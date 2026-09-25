@@ -5,7 +5,11 @@ import {
   depthField,
   extraField,
   systemOf,
-  len,
+  AREAS,
+  totalArea,
+  areaStep,
+  priceField,
+  COST_GROUP,
   area,
   depth,
   volume,
@@ -38,7 +42,9 @@ export default {
   groups: [
     { id: 'area', legend: 'Area to cover' },
     { id: 'material', legend: 'Material' },
+    COST_GROUP,
   ],
+  areas: AREAS,
   inputs: [
     lengthField('length', 'Area length', 30, 9, { group: 'area' }),
     lengthField('width', 'Area width', 10, 3, { group: 'area' }),
@@ -54,10 +60,16 @@ export default {
       help: 'About 1.4 US tons per yd³ (1.66 tonnes per m³) is typical for loose gravel. Your supplier can give the figure for their stone.',
     },
     extraField('extra', 'Extra allowance', 5, 'For uneven ground and spreading. Raise it if you will compact the gravel.', { group: 'material' }),
+    priceField('Price per ton', 'Price per tonne'),
   ],
 
+  cost: (r, ctx) => {
+    const s = ctx.system === 'metric' ? 'metric' : 'us';
+    return { count: ceilTo(fromBase(r.massWithExtra, 'mass', s === 'metric' ? 't' : 'ton'), BULK_STEP), unit: s === 'metric' ? 'tonnes' : 'tons' };
+  },
+
   compute(v) {
-    const surface = v.length * v.width;
+    const surface = totalArea(v);
     const vol = surface * v.depth;
     const volWithExtra = vol * (1 + v.extra / 100);
     const mass = vol * v.density; // kg
@@ -98,7 +110,7 @@ export default {
         },
       ],
       steps: [
-        `Area = ${len(r.length, s)} × ${len(r.width, s)} = ${area(r.surface, s)}`,
+        areaStep(r, s),
         `Volume = ${area(r.surface, s)} × ${depth(r.depth, s)} deep = ${volumeSimple(r.vol, s)}${s === 'us' ? ` = ${fmtAuto(cuYd(r.vol))} yd³` : ''}`,
         `With ${pct(r.extra)} extra = ${volume(r.vol, s)} × ${factor(r.extra)} = ${volume(r.volWithExtra, s)}`,
         `Weight = ${s === 'metric' ? `${fmtAuto(r.volWithExtra)} m³` : `${fmtAuto(cuYd(r.volWithExtra))} yd³`} × ${densityText(r.density, s)} = ${weight(r.massWithExtra, s)}`,

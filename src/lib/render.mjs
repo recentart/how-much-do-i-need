@@ -5,6 +5,8 @@
 import { UNITS } from './units.mjs';
 import { fieldDefault, defaultRaw, isVisible } from './validate.mjs';
 
+const CHECKBOX = '☐';
+
 export function esc(value) {
   return String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
@@ -34,13 +36,18 @@ function numberInput(f, text, extra = '') {
   return `<input class="input" id="${fid(f.name)}" name="${f.name}" type="number" inputmode="${decimal ? 'decimal' : 'numeric'}" step="${decimal ? 'any' : '1'}" min="${min}"${f.max != null ? ` max="${f.max}"` : ''} value="${esc(text)}"${f.optional ? '' : ' required'}${describedBy(f)}${extra}>`;
 }
 
+// A label can change with the unit system (e.g. price per gallon / per litre); the engine swaps it.
 function labelText(f) {
-  return `${esc(f.label)}${f.optional ? ' <span class="optional">(optional)</span>' : ''}`;
+  const text = f.labelMetric
+    ? `<span data-label-us="${esc(f.label)}" data-label-metric="${esc(f.labelMetric)}">${esc(f.label)}</span>`
+    : esc(f.label);
+  return `${text}${f.optional ? ' <span class="optional">(optional)</span>' : ''}`;
 }
 
-function renderField(f, raw) {
+export function renderField(f, raw = {}, { system = 'us', blank = false } = {}) {
   const hidden = isVisible(f, raw) ? '' : ' hidden';
-  const d = fieldDefault(f);
+  const d = fieldDefault(f, system);
+  if (blank && d.text !== undefined) d.text = '';
   const wrapOpen = `<div class="field field--${f.type}${f.wide ? ' field--wide' : ''}" data-field="${f.name}"${hidden}>`;
 
   if (f.type === 'checkbox') {
@@ -109,9 +116,13 @@ export function renderForm(def) {
     .map((g) => {
       const fields = def.inputs.filter((f) => f.group === g.id).map((f) => renderField(f, raw)).join('');
       if (!fields) return '';
+      const width = def.areas && def.inputs.find((f) => f.name === def.areas.width);
+      const areas = width && width.group === g.id ? extraAreasBlock(def) : '';
+      // A group whose fields are all hidden (e.g. picket settings while panels are chosen) hides too.
+      const groupHidden = def.inputs.filter((f) => f.group === g.id).every((f) => !isVisible(f, raw)) ? ' hidden' : '';
       return g.legend
-        ? `<fieldset class="field-group"><legend>${esc(g.legend)}</legend><div class="field-grid">${fields}</div></fieldset>`
-        : `<div class="field-grid">${fields}</div>`;
+        ? `<fieldset class="field-group"${groupHidden}><legend>${esc(g.legend)}</legend><div class="field-grid">${fields}</div>${areas}</fieldset>`
+        : `<div class="field-grid">${fields}</div>${areas}`;
     })
     .join('');
 
@@ -120,10 +131,49 @@ export function renderForm(def) {
     ${body}
     <div class="form-actions">
       <button type="button" class="button button--secondary" data-action="reset">Reset to defaults</button>
+      <button type="button" class="button button--secondary" data-action="share">Copy link to this result</button>
+      <button type="button" class="button button--secondary" data-action="print">Print shopping list</button>
       <p class="form-note">Results update as you type.</p>
+      <p class="form-status" data-form-status role="status"></p>
     </div>
     <noscript><p class="form-note">JavaScript is turned off, so this page shows the result for the default values.</p></noscript>
   </form>`;
+}
+
+// Extra rectangles are added by the engine; without JavaScript the block stays hidden.
+function extraAreasBlock(def) {
+  return `<div class="extra-areas" data-extra-areas>
+      <div data-extra-area-rows></div>
+      <button type="button" class="button button--link" data-action="add-area">+ Add another area</button>
+      <p class="field-help">For L-shaped or irregular spaces, split them into rectangles and add each one.</p>
+    </div>`;
+}
+
+// One extra rectangle: "Area n" with its own length and width.
+export function renderExtraArea(fields, n, system) {
+  const field = (f) => renderField(f, {}, { system, blank: true });
+  return `<div class="extra-area" data-area-row="${n}">
+      <div class="extra-area-head"><span class="extra-area-title">Area ${n}</span>
+        <button type="button" class="button button--link" data-action="remove-area" data-area="${n}" aria-label="Remove area ${n}">Remove</button></div>
+      <div class="field-grid">${field(fields[0])}${field(fields[1])}</div>
+    </div>`;
+}
+
+// Printable shopping list: what to buy (and cost), plus the inputs it was based on.
+export function renderPrintList(title, model, inputs, url) {
+  if (!model || model.error) return '';
+  const buy = (model.sections || []).filter((s) => s.kind === 'buy' || s.kind === 'cost');
+  const items = buy
+    .flatMap((s) => s.rows.map((r) => (s.kind === 'cost' ? { ...r, label: `Estimated cost (${r.label})` } : r)))
+    .map((r) => `<li><span class="print-box" aria-hidden="true">${CHECKBOX}</span> ${esc(r.label)}: <strong>${esc(r.value)}</strong></li>`)
+    .join('');
+  const based = inputs.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
+  return `<h2>Shopping list: ${esc(title)}</h2>
+    <p class="print-headline">${esc(model.headline.label)}: <strong>${esc(model.headline.value)}</strong></p>
+    <ul class="print-items">${items}</ul>
+    <h3>Based on</h3>
+    <dl class="print-inputs">${based}</dl>
+    <p class="print-source">Estimate from How Much Do I Need?: ${esc(url)}</p>`;
 }
 
 function rowsHtml(rows) {

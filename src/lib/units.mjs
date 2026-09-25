@@ -57,6 +57,16 @@ export const UNITS = {
     kg: { f: 1, label: 'kg', name: 'kilograms', system: 'metric' },
     t: { f: 1000, label: 'tonnes', name: 'metric tonnes (1,000 kg)', system: 'metric' },
   },
+  // base: kilograms per square metre (seeding rates)
+  seedRate: {
+    lb1000: { f: LB / (1000 * FT2), label: 'lb per 1,000 ft²', name: 'pounds per 1,000 square feet', system: 'us' },
+    gm2: { f: 0.001, label: 'g per m²', name: 'grams per square metre', system: 'metric' },
+  },
+  // base: litres per minute
+  flow: {
+    gpm: { f: GAL_L, label: 'gal per minute', name: 'US gallons per minute', system: 'us' },
+    Lmin: { f: 1, label: 'L per minute', name: 'litres per minute', system: 'metric' },
+  },
   // base: byte (decimal prefixes, as used by drive and phone makers)
   data: {
     KB: { f: 1e3, label: 'KB', name: 'kilobytes', system: 'any' },

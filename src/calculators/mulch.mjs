@@ -5,7 +5,11 @@ import {
   depthField,
   extraField,
   systemOf,
-  len,
+  AREAS,
+  totalArea,
+  areaStep,
+  priceField,
+  COST_GROUP,
   area,
   depth,
   volume,
@@ -35,7 +39,9 @@ export default {
   groups: [
     { id: 'area', legend: 'Area to cover' },
     { id: 'buy', legend: 'Buying' },
+    COST_GROUP,
   ],
+  areas: AREAS,
   inputs: [
     lengthField('length', 'Area length', 20, 6, { group: 'area' }),
     lengthField('width', 'Area width', 10, 3, { group: 'area' }),
@@ -51,10 +57,13 @@ export default {
       help: 'Check the bag. 2 ft³ is a common US size; metric bags are sold in litres.',
     },
     extraField('extra', 'Extra allowance', 5, 'For uneven ground and settling. Set to 0 for the exact amount.', { group: 'buy' }),
+    priceField('Price per bag'),
   ],
 
+  cost: (r) => ({ count: r.bags, unit: 'bags' }),
+
   compute(v) {
-    const surface = v.length * v.width;
+    const surface = totalArea(v);
     const vol = surface * v.depth;
     const volWithExtra = vol * (1 + v.extra / 100);
     const bagsExact = volWithExtra / v.bagSize;
@@ -89,7 +98,7 @@ export default {
         },
       ],
       steps: [
-        `Area = ${len(r.length, s)} × ${len(r.width, s)} = ${area(r.surface, s)}`,
+        areaStep(r, s),
         `Volume = ${area(r.surface, s)} × ${depth(r.depth, s)} deep = ${volumeSimple(r.vol, s)}${s === 'us' ? ` = ${fmtAuto(cuYd(r.vol))} yd³ (27 ft³ per yd³)` : ''}`,
         `With ${pct(r.extra)} extra = ${volumeSimple(r.vol, s)} × ${factor(r.extra)} = ${volumeSimple(r.volWithExtra, s)}`,
         `Bags = ${bagText(r.volWithExtra, s)} ÷ ${bagText(r.bagSize, s)} per bag = ${fmtUp(r.bagsExact, 2)}, rounded up to ${fmt(r.bags, 0)}`,

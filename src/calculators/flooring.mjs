@@ -1,5 +1,5 @@
 import { fmt, fmtUp, ceilTo, plural } from '../lib/units.mjs';
-import { lengthField, extraField, systemOf, other, len, area, pct, factor } from './_shared.mjs';
+import { lengthField, extraField, systemOf, other, area, pct, factor, AREAS, totalArea, areaStep, priceField, COST_GROUP } from './_shared.mjs';
 
 export default {
   id: 'flooring',
@@ -17,7 +17,9 @@ export default {
   groups: [
     { id: 'room', legend: 'Room size' },
     { id: 'product', legend: 'Flooring' },
+    COST_GROUP,
   ],
+  areas: AREAS,
   inputs: [
     lengthField('length', 'Room length', 15, 4.5, { group: 'room' }),
     lengthField('width', 'Room width', 12, 3.6, { group: 'room' }),
@@ -38,10 +40,13 @@ export default {
       'About 5–10% for a straight lay in a simple room; more for diagonal or herringbone patterns and rooms with many corners.',
       { group: 'product' },
     ),
+    priceField('Price per box'),
   ],
 
+  cost: (r) => ({ count: r.boxes, unit: 'boxes' }),
+
   compute(v) {
-    const floorArea = v.length * v.width;
+    const floorArea = totalArea(v);
     const areaWithWaste = floorArea * (1 + v.waste / 100);
     const boxesExact = areaWithWaste / v.boxCoverage;
     const boxes = ceilTo(boxesExact, 1);
@@ -80,7 +85,7 @@ export default {
         },
       ],
       steps: [
-        `Floor area = ${len(r.length, s)} × ${len(r.width, s)} = ${area(r.floorArea, s)}`,
+        areaStep(r, s, 'Floor area'),
         `With ${pct(r.waste)} waste = ${area(r.floorArea, s)} × ${factor(r.waste)} = ${area(r.areaWithWaste, s)}`,
         `Boxes = ${area(r.areaWithWaste, s)} ÷ ${area(r.boxCoverage, s)} per box = ${fmtUp(r.boxesExact, 2)}`,
         `Rounded up to whole boxes = ${fmt(r.boxes, 0)} ${boxWord}`,

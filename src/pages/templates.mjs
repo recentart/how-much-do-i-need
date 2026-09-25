@@ -28,6 +28,21 @@ const ICONS = {
   gravel: '<ellipse cx="7" cy="16" rx="4" ry="3"/><ellipse cx="16.5" cy="15" rx="4.5" ry="3.5"/><ellipse cx="11" cy="8" rx="4" ry="3"/>',
   concrete: '<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
   storage: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 14h18"/><circle cx="17" cy="17" r="1"/>',
+  wallpaper: '<path d="M4 4h12v16H4z"/><path d="M16 6h3a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-3"/><path d="M7 8l2 2-2 2M11 12l2 2-2 2"/>',
+  drywall: '<rect x="3" y="3" width="8" height="18" rx="1"/><rect x="13" y="3" width="8" height="18" rx="1"/>',
+  insulation: '<path d="M3 20h18"/><path d="M4 16c2-3 4 3 6 0s4 3 6 0 3 2 4 1"/><path d="M4 11c2-3 4 3 6 0s4 3 6 0 3 2 4 1"/><path d="M4 6c2-3 4 3 6 0s4 3 6 0 3 2 4 1"/>',
+  lawn: '<path d="M3 20h18"/><path d="M5 20c0-4 1-7 2-9M9 20c0-5 1-9 3-12M13 20c0-4 2-8 4-10M17 20c0-3 1-5 2-6"/>',
+  fence: '<path d="M5 21V6l2-3 2 3v15M15 21V6l2-3 2 3v15"/><path d="M3 10h18M3 16h18"/>',
+  deck: '<path d="M3 8h18M3 12h18M3 16h18"/><path d="M5 16v4M19 16v4"/>',
+  paver: '<rect x="3" y="3" width="8" height="5" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="3" y="10" width="4" height="5" rx="1"/><rect x="9" y="10" width="8" height="5" rx="1"/><rect x="19" y="10" width="2" height="5"/><rect x="3" y="17" width="8" height="4" rx="1"/><rect x="13" y="17" width="8" height="4" rx="1"/>',
+  'retaining-wall': '<path d="M3 21h18"/><rect x="3" y="15" width="6" height="6"/><rect x="9" y="15" width="6" height="6"/><rect x="5" y="9" width="6" height="6"/><rect x="11" y="9" width="6" height="6"/><path d="M15 15h6M17 9c2 0 4-2 4-4"/>',
+  pool: '<path d="M3 17c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1 2-1 2-1"/><path d="M3 21c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1"/><path d="M8 13V5a2 2 0 0 1 4 0M16 13V5a2 2 0 0 0-4 0M8 8h8"/>',
+  brick: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 9.3h18M3 14.6h18M12 4v5.3M7 9.3v5.3M17 9.3v5.3M12 14.6V20"/>',
+  roofing: '<path d="M2 12l10-8 10 8"/><path d="M5 10v10h14V10"/><path d="M8 14h8M8 17h8"/>',
+  boxes: '<path d="M3 8l9-4 9 4v10l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v10M7.5 6l9 4"/>',
+  truck: '<path d="M2 6h12v10H2zM14 10h4l3 3v3h-7z"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+  party: '<path d="M4 21l5-14 9 9z"/><path d="M13 4v2M17 5l-1 2M20 8h-2M15 9c1-1 2-1 3 0"/>',
+  internet: '<path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/>',
 };
 
 export function icon(id, cls = 'icon') {
@@ -290,6 +305,7 @@ export function calculatorPage(def, ctx) {
           <p id="result-live" class="visually-hidden" aria-live="polite" aria-atomic="true"></p>
         </section>
       </div>
+      <section id="print-summary" class="print-summary" aria-hidden="true"></section>
       ${adSlot('below-result')}
       <article class="calc-content" aria-label="About this calculator">
         ${sections.join('\n')}

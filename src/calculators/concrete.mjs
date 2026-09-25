@@ -6,7 +6,11 @@ import {
   depthField,
   extraField,
   systemOf,
-  len,
+  AREAS,
+  totalArea,
+  areaStep,
+  priceField,
+  COST_GROUP,
   area,
   depth,
   volume,
@@ -43,7 +47,9 @@ export default {
   groups: [
     { id: 'slab', legend: 'Slab size' },
     { id: 'buy', legend: 'Buying' },
+    COST_GROUP,
   ],
+  areas: AREAS,
   inputs: [
     lengthField('length', 'Length', 10, 3, { group: 'slab' }),
     lengthField('width', 'Width', 10, 3, { group: 'slab' }),
@@ -72,10 +78,13 @@ export default {
       help: 'The volume one bag makes once mixed, printed on the bag.',
       showIf: (raw) => raw.bag === 'custom',
     },
+    priceField('Price per bag'),
   ],
 
+  cost: (r) => ({ count: r.bags, unit: 'bags' }),
+
   compute(v) {
-    const surface = v.length * v.width;
+    const surface = totalArea(v);
     const vol = surface * v.depth;
     const volWithExtra = vol * (1 + v.extra / 100);
     const bagYield = v.bag === 'custom' ? v.bagYield : BAGS[v.bag].yield;
@@ -108,7 +117,7 @@ export default {
         { title: 'Calculated volume (no waste)', kind: 'exact', rows: [{ label: 'Slab area', value: area(r.surface, s) }, ...volumeRows(r.vol)] },
       ],
       steps: [
-        `Area = ${len(r.length, s)} × ${len(r.width, s)} = ${area(r.surface, s)}`,
+        areaStep(r, s),
         `Volume = ${area(r.surface, s)} × ${depth(r.depth, s)} thick = ${volumeSimple(r.vol, s)}${s === 'us' ? ` = ${fmtAuto(cuYd(r.vol))} yd³ (27 ft³ per yd³)` : ''}`,
         `With ${pct(r.extra)} waste = ${volumeSimple(r.vol, s)} × ${factor(r.extra)} = ${volumeSimple(r.volWithExtra, s)}${s === 'us' ? ` (${fmtAuto(cuYd(r.volWithExtra))} yd³)` : ''}`,
         `Ready-mix = ${bulkNeed(r.volWithExtra, s)}, rounded up to the next quarter ${s === 'metric' ? 'cubic metre' : 'cubic yard'} = ${order.text}`,

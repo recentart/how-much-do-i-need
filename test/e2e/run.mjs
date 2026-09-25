@@ -11,6 +11,7 @@ import { createStaticServer } from '../../scripts/serve.mjs';
 import { CALCULATORS } from '../../src/calculators/index.mjs';
 import { run, rawWith, defaultRaw } from '../../src/lib/validate.mjs';
 import { hasSystemToggle } from '../../src/lib/render.mjs';
+import { convert } from '../../src/lib/units.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SHOTS = path.join(HERE, 'screenshots');
@@ -172,9 +173,11 @@ await check('home page explains the site and lists every calculator', async () =
 });
 
 await check('search filters as you type', async () => {
-  await page.typeInto('#calc-search', 'gravel');
-  eq(await page.eval(`[...document.querySelectorAll('[data-search]:not([hidden]) .calc-card-name')].map(e => e.textContent).join()`), 'Gravel Calculator', 'gravel results');
+  await page.typeInto('#calc-search', 'mulch');
+  eq(await page.eval(`[...document.querySelectorAll('[data-search]:not([hidden]) .calc-card-name')].map(e => e.textContent).join()`), 'Mulch Calculator', 'mulch results');
   expect((await page.eval(`document.getElementById('calc-search-status').textContent`)).includes('1 calculator found'), 'status message');
+  await page.typeInto('#calc-search', 'gravel');
+  expect((await page.eval(`[...document.querySelectorAll('[data-search]:not([hidden]) .calc-card-name')].map(e => e.textContent).join()`)).includes('Gravel Calculator'), 'gravel finds the gravel calculator');
   await page.typeInto('#calc-search', 'photos');
   eq(await page.eval(`[...document.querySelectorAll('[data-search]:not([hidden]) .calc-card-name')].map(e => e.textContent).join()`), 'Storage Calculator', 'photos results');
   await page.typeInto('#calc-search', 'litres');
@@ -188,12 +191,12 @@ await check('search filters as you type', async () => {
 
 await check('pressing Enter on a single match opens that calculator', async () => {
   await open('/');
-  await page.typeInto('#calc-search', 'concrete');
+  await page.typeInto('#calc-search', 'wallpaper');
   const nav = page.conn.waitFor((m) => m.sessionId === page.sessionId && m.method === 'Page.loadEventFired');
   await page.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' });
   await page.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
   await nav;
-  expect((await page.eval('location.pathname')) === '/concrete-calculator/', `ended at ${await page.eval('location.pathname')}`);
+  expect((await page.eval('location.pathname')) === '/wallpaper-calculator/', `ended at ${await page.eval('location.pathname')}`);
 });
 
 await check('All calculators page honours ?q= and links to every calculator', async () => {
@@ -219,7 +222,7 @@ for (const def of CALCULATORS) {
   console.log(`\n${def.name} (/${def.slug}/)`);
   const url = `/${def.slug}/`;
   const firstMeasure = def.inputs.find((f) => f.type === 'measure' && !f.optional);
-  const firstNumber = def.inputs.find((f) => ['measure', 'count', 'percent'].includes(f.type) && !f.optional);
+  const firstNumber = def.inputs.find((f) => ['measure', 'count', 'percent', 'number'].includes(f.type) && !f.optional && !f.showIf);
 
   await check('loads without errors and becomes interactive', async () => {
     await open(url);
@@ -233,7 +236,7 @@ for (const def of CALCULATORS) {
   await check('default result matches the tested formula', async () => {
     eq(await page.eval(js.headline), nodeHeadline(def), 'headline');
     const text = await page.eval(`document.getElementById('calc-result').innerText`);
-    expect(/Estimated amount to buy|Suggested storage/.test(text), 'buy section');
+    expect(/Estimated amount|Suggested storage/.test(text), 'buy section');
     expect(/Calculated (quantity|volume|total)/.test(text), 'exact section');
     expect(text.includes('How this was calculated'), 'working shown');
   });
@@ -278,19 +281,23 @@ for (const def of CALCULATORS) {
       const f = firstMeasure;
       await page.eval(js.set(f.name, '153'));
       await page.eval(js.setUnit(f.name, 'in'));
-      eq(await page.eval(js.headline), nodeHeadline(def, { [f.name]: [153, 'in'] }), 'headline in inches');
-      eq(await page.eval(js.headline), nodeHeadline(def, { [f.name]: [12.75, 'ft'] }), 'same as 12.75 ft');
+      const inInches = await page.eval(js.headline);
+      eq(inInches, nodeFromPage(def, await page.eval(js.raw(def))), 'headline in inches matches the formula');
+      await page.eval(js.set(f.name, '12.75'));
+      await page.eval(js.setUnit(f.name, 'ft'));
+      eq(await page.eval(js.headline), inInches, '153 in gives the same answer as 12.75 ft');
     });
   }
 
-  await check('waste / extra percentage changes the amount to buy', async () => {
-    const pctField = def.inputs.find((f) => f.type === 'percent');
-    await page.eval(js.set(pctField.name, '0'));
-    const at0 = await page.eval(js.headline);
-    eq(at0, nodeFromPage(def, await page.eval(js.raw(def))), 'headline at 0% matches the formula for the form as it stands');
-    await page.eval(js.set(pctField.name, '100'));
-    const at100 = await page.eval(js.headline);
-    expect(at0 !== at100, `0% and 100% gave the same result (${at0})`);
+  const pctField = def.inputs.find((f) => f.type === 'percent');
+  if (pctField) await check('waste / extra percentage changes the amount to buy', async () => {
+    await page.eval(js.set(pctField.name, '5'));
+    eq(await page.eval(js.headline), nodeFromPage(def, await page.eval(js.raw(def))), 'headline at 5% matches the formula for the form as it stands');
+    const resultText = `document.getElementById('calc-result').innerText`;
+    const at5 = await page.eval(resultText);
+    await page.eval(js.set(pctField.name, '60'));
+    eq(await page.eval(js.headline), nodeFromPage(def, await page.eval(js.raw(def))), 'headline at 60% matches the formula');
+    expect(at5 !== (await page.eval(resultText)), '5% and 60% gave the same result');
     await page.eval(js.set(pctField.name, '101'));
     expect((await page.eval(js.fieldError(pctField.name))).visible, 'over 100% rejected');
   });
@@ -321,10 +328,11 @@ for (const def of CALCULATORS) {
       await waitFor(`document.getElementById('calc-form').classList.contains('is-live')`);
       eq(await page.eval(`document.getElementById('sys-metric').checked`), true, 'metric remembered after reload');
       eq(await page.eval(js.headline), nodeHeadline(def, {}, 'metric'), 'metric headline after reload');
-      // A typed value is converted, not reset: 5 m -> 16.4 ft
+      // A typed value is converted, not reset (e.g. 5 m -> 16.4 ft)
       await page.eval(js.set(firstMeasure.name, '5'));
       await page.eval(`document.querySelector('label[for="sys-us"]').click()`);
-      eq(await page.eval(`document.querySelector('[name="${firstMeasure.name}"]').value`), '16.4', 'converted value');
+      const want = convert(5, firstMeasure.dim, firstMeasure.default.metric[1], firstMeasure.default.us[1]);
+      eq(await page.eval(`document.querySelector('[name="${firstMeasure.name}"]').value`), String(Number(want.toFixed(2))), 'converted value');
       await page.eval(`document.querySelector('[data-action="reset"]').click()`);
       eq(await page.eval(js.headline), nodeHeadline(def), 'US defaults after reset');
     });
@@ -428,6 +436,109 @@ await check('huge values show a validation message, not Infinity', async () => {
   const text = await page.eval(js.bodyText);
   expect(!/Infinity|NaN/.test(text), 'no Infinity/NaN');
   expect((await page.eval(js.fieldError('length'))).text.includes("can't be more than"), 'max error shown');
+});
+
+// ---------------- Shared features: share links, extra areas, price, printing ----------------
+
+console.log('\nShare links, extra areas, prices and printing');
+const flooringDef = CALCULATORS.find((d) => d.id === 'flooring');
+
+await check('a shared link reopens the calculator with the same inputs and result', async () => {
+  await open('/flooring-calculator/');
+  await page.eval(`document.querySelector('label[for="sys-metric"]').click()`);
+  await page.eval(js.set('length', '5.25'));
+  await page.eval(js.set('waste', '15'));
+  await page.eval(`document.querySelector('[data-action="add-area"]').click()`);
+  await page.eval(js.set('xa2_length', '2'));
+  await page.eval(js.set('xa2_width', '1.5'));
+  const before = await page.eval(js.headline);
+  await page.eval(`document.querySelector('[data-action="share"]').click()`);
+  const url = await waitFor(`document.getElementById('calc-form').dataset.shareUrl`);
+  expect(url.startsWith(`${BASE}/flooring-calculator/?`), `share url ${url}`);
+  expect(await waitFor(`document.querySelector('[data-form-status]').textContent`), 'status message shown');
+  // Reset stored preference so the link alone must carry the unit system
+  await page.eval(`localStorage.clear()`);
+  await page.goto(url);
+  await waitFor(`document.getElementById('calc-form').classList.contains('is-live')`);
+  eq(await page.eval(js.headline), before, 'same headline from the link');
+  eq(await page.eval(`document.getElementById('sys-metric').checked`), true, 'metric restored');
+  eq(await page.eval(`document.querySelector('[name="xa2_length"]').value`), '2', 'extra area restored');
+});
+
+await check('links with bad values are validated, not trusted', async () => {
+  await open('/flooring-calculator/?length=-4&waste=abc&length_u=parsecs&units=martian');
+  const err = await page.eval(js.fieldError('length'));
+  expect(err.visible, 'negative length rejected');
+  eq(await page.eval(`document.querySelector('[name="length__unit"]').value`), 'ft', 'unknown unit ignored');
+  const text = await page.eval(js.bodyText);
+  expect(!/NaN|Infinity|undefined/.test(text), 'no NaN/Infinity/undefined');
+});
+
+await check('adding and removing areas updates the result', async () => {
+  await open('/flooring-calculator/');
+  await page.eval(`document.querySelector('[data-action="add-area"]').click()`);
+  expect(await page.eval(js.emptyMessage), 'empty new area asks for a value');
+  await page.eval(js.set('xa2_length', '5'));
+  await page.eval(js.set('xa2_width', '4'));
+  eq(await page.eval(js.headline), nodeHeadline(flooringDef, { extraAreas: [{ length: [5, 'ft'], width: [4, 'ft'] }] }), 'two areas');
+  await page.eval(`document.querySelector('[data-action="add-area"]').click()`);
+  await page.eval(js.set('xa3_length', '3'));
+  await page.eval(js.set('xa3_width', '3'));
+  await page.eval(`document.querySelector('[data-action="remove-area"][data-area="2"]').click()`);
+  eq(await page.eval(`document.querySelector('[name="xa2_length"]').value`), '3', 'area 3 renumbered to area 2');
+  eq(await page.eval(js.headline), nodeHeadline(flooringDef, { extraAreas: [{ length: [3, 'ft'], width: [3, 'ft'] }] }), 'after removing');
+  await page.eval(`document.querySelector('[data-action="reset"]').click()`);
+  eq(await page.eval(`document.querySelectorAll('.extra-area').length`), 0, 'reset removes extra areas');
+});
+
+await check('extra areas convert with the US/Metric switch', async () => {
+  await open('/flooring-calculator/');
+  await page.eval(`document.querySelector('[data-action="add-area"]').click()`);
+  await page.eval(js.set('xa2_length', '10'));
+  await page.eval(js.set('xa2_width', '10'));
+  await page.eval(`document.querySelector('label[for="sys-metric"]').click()`);
+  eq(await page.eval(`document.querySelector('[name="xa2_length"]').value`), '3.05', '10 ft -> 3.05 m');
+  eq(await page.eval(`document.querySelector('[name="xa2_length__unit"]').value`), 'm', 'unit switched');
+  await page.eval(`document.querySelector('label[for="sys-us"]').click()`);
+  eq(await page.eval(`document.querySelector('[name="xa2_length"]').value`), '10', 'back to exactly 10 ft');
+});
+
+await check('a price adds the estimated cost, and the price label follows the unit system', async () => {
+  await open('/paint-calculator/');
+  eq(await page.eval(`document.querySelector('label[for="f-price"]').textContent.trim()`), 'Price per gallon (optional)', 'US label');
+  await page.eval(js.set('price', '40'));
+  const text = await page.eval(`document.getElementById('calc-result').innerText`);
+  expect(text.includes('Estimated cost') && text.includes('80.00'), `cost section: ${text.slice(0, 200)}`);
+  await page.eval(`document.querySelector('label[for="sys-metric"]').click()`);
+  eq(await page.eval(`document.querySelector('label[for="f-price"]').textContent.trim()`), 'Price per litre (optional)', 'metric label');
+  await page.eval(`document.querySelector('label[for="sys-us"]').click()`);
+});
+
+await check('sections with nothing to show are hidden, and reappear when needed', async () => {
+  await open('/fence-calculator/');
+  const pickets = `[...document.querySelectorAll('.field-group')].find((g) => g.querySelector('legend').textContent === 'Pickets and rails')`;
+  eq(await page.eval(`(${pickets}).hidden`), true, 'hidden for panels');
+  await page.eval(js.select('style', 'pickets'));
+  eq(await page.eval(`(${pickets}).hidden`), false, 'shown for pickets');
+  eq(await page.eval(js.headline), nodeHeadline(CALCULATORS.find((d) => d.id === 'fence'), { style: 'pickets' }), 'picket result');
+});
+
+await check('the printed page is a shopping list without the form', async () => {
+  await open('/tile-calculator/');
+  await page.eval(js.set('price', '2.5'));
+  await page.send('Emulation.setEmulatedMedia', { media: 'print' });
+  try {
+    eq(await page.eval(`getComputedStyle(document.querySelector('.calc-inputs')).display`), 'none', 'form hidden in print');
+    eq(await page.eval(`getComputedStyle(document.getElementById('print-summary')).display`), 'block', 'list shown in print');
+    const list = await page.eval(`document.getElementById('print-summary').innerText`);
+    expect(list.includes('Shopping list: Tile Calculator') && list.includes('Tiles') && list.includes('Estimated cost'), `list: ${list.slice(0, 200)}`);
+    const pairs = await page.eval(`[...document.querySelectorAll('#print-summary .print-inputs div')].map((d) => d.querySelector('dt').textContent + ': ' + d.querySelector('dd').textContent)`);
+    expect(pairs.includes('Area length: 10 ft') && pairs.includes('Tile length: 12 in') && pairs.includes('Price per tile: 2.5'), `inputs listed: ${pairs.join(' | ')}`);
+    await page.screenshot(path.join(SHOTS, 'tile-print.png'));
+  } finally {
+    await page.send('Emulation.setEmulatedMedia', { media: '' });
+  }
+  eq(await page.eval(`getComputedStyle(document.getElementById('print-summary')).display`), 'none', 'list hidden on screen');
 });
 
 // ---------------- Whole-site checks ----------------

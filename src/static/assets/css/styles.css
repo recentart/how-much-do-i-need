@@ -1123,3 +1123,157 @@ select.input {
     box-shadow: none;
   }
 }
+
+/* ---------- Extra areas, share, print ---------- */
+
+.button--link {
+  min-height: 40px;
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.extra-areas {
+  margin-top: 12px;
+}
+
+.calc-form:not(.is-live) .extra-areas {
+  display: none;
+}
+
+.extra-area {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.extra-area-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.extra-area-title {
+  font-weight: 700;
+}
+
+.form-status {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ok);
+}
+
+.form-status:empty {
+  display: none;
+}
+
+.share-url {
+  margin-top: 6px;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.print-summary {
+  display: none;
+}
+
+@media print {
+  .calc-inputs,
+  .result-working,
+  .result-notes,
+  .result-section--exact,
+  .calc-content,
+  .lead,
+  .calc-results .results-title {
+    display: none !important;
+  }
+
+  .calc-panel {
+    display: block;
+    border: 0;
+  }
+
+  .calc-results {
+    background: none;
+    border: 0;
+  }
+
+  .print-summary {
+    display: block;
+    margin-top: 16px;
+  }
+
+  .print-items {
+    list-style: none;
+    padding: 0;
+  }
+
+  .print-items li {
+    margin-bottom: 6px;
+  }
+
+  .print-inputs div {
+    display: flex;
+    gap: 8px;
+  }
+
+  .print-inputs dt::after {
+    content: ':';
+  }
+
+  .print-inputs dd {
+    margin: 0;
+  }
+}
+
+.data-table {
+  width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.data-table thead th {
+  border-bottom: 2px solid var(--line-strong);
+}
+
+.calc-content {
+  overflow-x: auto;
+}
+
+/* Never let a long dropdown option or table widen the page on small screens. */
+@media (max-width: 1099px) {
+  .page-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.field,
+.field-grid,
+.calc-inputs,
+.calc-results {
+  min-width: 0;
+}
+
+select.input {
+  max-width: 100%;
+  text-overflow: ellipsis;
+}

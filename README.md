@@ -8,14 +8,37 @@ Each calculator asks for a few measurements and shows three things: the exact ca
 
 | Calculator | URL |
 | --- | --- |
-| Paint | [/paint-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/paint-calculator/) |
-| Flooring | [/flooring-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/flooring-calculator/) |
-| Tile | [/tile-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/tile-calculator/) |
-| Mulch | [/mulch-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/mulch-calculator/) |
-| Soil | [/soil-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/soil-calculator/) |
-| Gravel | [/gravel-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/gravel-calculator/) |
-| Concrete | [/concrete-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/concrete-calculator/) |
-| Storage | [/storage-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/storage-calculator/) |
+| Paint Calculator | [/paint-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/paint-calculator/) |
+| Wallpaper Calculator | [/wallpaper-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/wallpaper-calculator/) |
+| Flooring Calculator | [/flooring-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/flooring-calculator/) |
+| Tile Calculator | [/tile-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/tile-calculator/) |
+| Drywall Calculator | [/drywall-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/drywall-calculator/) |
+| Insulation Calculator | [/insulation-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/insulation-calculator/) |
+| Mulch Calculator | [/mulch-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/mulch-calculator/) |
+| Soil Calculator | [/soil-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/soil-calculator/) |
+| Gravel Calculator | [/gravel-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/gravel-calculator/) |
+| Grass Seed and Sod Calculator | [/grass-seed-sod-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/grass-seed-sod-calculator/) |
+| Fence Calculator | [/fence-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/fence-calculator/) |
+| Deck Board Calculator | [/deck-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/deck-calculator/) |
+| Paver Calculator | [/paver-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/paver-calculator/) |
+| Retaining Wall Block Calculator | [/retaining-wall-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/retaining-wall-calculator/) |
+| Pool and Water Tank Volume Calculator | [/pool-volume-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/pool-volume-calculator/) |
+| Concrete Calculator | [/concrete-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/concrete-calculator/) |
+| Brick Calculator | [/brick-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/brick-calculator/) |
+| Roofing Shingle Calculator | [/roofing-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/roofing-calculator/) |
+| Moving Box Calculator | [/moving-boxes-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/moving-boxes-calculator/) |
+| Moving Truck Size Calculator | [/moving-truck-size-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/moving-truck-size-calculator/) |
+| Party Food and Drink Calculator | [/party-food-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/party-food-calculator/) |
+| Storage Calculator | [/storage-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/storage-calculator/) |
+| Internet Speed and Data Calculator | [/internet-speed-data-calculator/](https://how-much-do-i-need.freewebtoolss.workers.dev/internet-speed-data-calculator/) |
+
+## Features on every calculator
+
+- **US or metric units**, with a unit menu on every measurement. Values convert when you switch, and the choice is remembered on your device.
+- **Several areas added together**: split L-shaped or irregular spaces into rectangles with *Add another area* (area-based calculators).
+- **Optional price** per box, bag, gallon and so on, for an estimated total cost.
+- **Copy link to this result**: the link carries every input, so a partner or contractor opens the same calculation.
+- **Print shopping list**: a printable checklist of what to buy, the cost, and the inputs it was based on.
 
 ## How it works
 
