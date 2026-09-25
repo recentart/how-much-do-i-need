@@ -1,0 +1,19 @@
+{
+  "name": "how-much-do-i-need",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Free practical calculators for estimating how much material, space, or quantity you need.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test \"test/*.test.mjs\"",
+    "test:e2e": "node scripts/build.mjs && node test/e2e/run.mjs",
+    "serve": "node scripts/build.mjs && node scripts/serve.mjs",
+    "images": "node scripts/make-images.mjs",
+    "deploy": "npx wrangler deploy"
+  }
+}

@@ -1,0 +1,18 @@
+// Cloudflare Worker that only serves static files: there is no Worker script ("main").
+// The site's source lives in src/; scripts/build.mjs generates the deployable files into dist/,
+// and Wrangler runs that build automatically before every `npx wrangler deploy`.
+{
+  "name": "how-much-do-i-need",
+  "compatibility_date": "2025-09-01",
+  "workers_dev": true,
+  "build": {
+    "command": "node scripts/build.mjs"
+  },
+  "assets": {
+    "directory": "./dist",
+    // /paint-calculator serves dist/paint-calculator/index.html via a redirect to /paint-calculator/
+    "html_handling": "auto-trailing-slash",
+    // Unknown URLs get dist/404.html with a 404 status
+    "not_found_handling": "404-page"
+  }
+}
