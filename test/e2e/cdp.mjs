@@ -189,9 +189,15 @@ export async function launch({ port = 9300 + Math.floor(Math.random() * 400) } =
         /* already closed */
       }
       ws.close();
+      // Wait for Chrome to actually exit so it releases its profile folder (Windows locks it).
+      const exited = new Promise((resolve) => (proc.exitCode !== null ? resolve() : proc.once('exit', resolve)));
       proc.kill();
-      await sleep(300);
-      rmSync(userDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+      await Promise.race([exited, sleep(5000)]);
+      try {
+        rmSync(userDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+      } catch {
+        /* best effort: a leftover temp profile must never fail a test run */
+      }
     },
   };
 }

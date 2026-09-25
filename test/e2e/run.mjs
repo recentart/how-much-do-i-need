@@ -473,6 +473,55 @@ await check('dark mode renders (screenshot)', async () => {
   await page.send('Emulation.setEmulatedMedia', { features: [] });
 });
 
+// WCAG 2.1 contrast, measured on the rendered page: text 4.5:1 (3:1 when large), input borders 3:1.
+const CONTRAST = `(() => {
+  const parse = (c) => { const m = c.match(/rgba?\\(([^)]+)\\)/); if (!m) return null; const [r, g, b, a = 1] = m[1].split(/[ ,\\/]+/).filter(Boolean).map(Number); return { r, g, b, a }; };
+  const lum = ({ r, g, b }) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const bgOf = (el) => { for (let e = el; e; e = e.parentElement) { const c = parse(getComputedStyle(e).backgroundColor); if (c && c.a > 0.5) return c; } return parse(getComputedStyle(document.body).backgroundColor); };
+  const fails = [];
+  for (const el of document.querySelectorAll('body *')) {
+    if (!el.offsetParent && el.tagName !== 'BODY') continue;
+    const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+    const cs = getComputedStyle(el);
+    if (own && !el.closest('.visually-hidden')) {
+      const size = parseFloat(cs.fontSize), bold = Number(cs.fontWeight) >= 700;
+      const need = size >= 24 || (bold && size >= 18.66) ? 3 : 4.5;
+      const r = ratio(parse(cs.color), bgOf(el));
+      if (r < need) fails.push(el.tagName.toLowerCase() + '.' + el.className + ' "' + el.textContent.trim().slice(0, 30) + '" ' + r.toFixed(2));
+    }
+    if ((el.matches('input.input, select.unit-select, .search-field input')) && cs.borderTopStyle !== 'none') {
+      const r = ratio(parse(cs.borderTopColor), bgOf(el.parentElement));
+      if (r < 3) fails.push('border of ' + el.name + ' ' + r.toFixed(2));
+    }
+  }
+  return fails;
+})()`;
+
+for (const scheme of ['light', 'dark']) {
+  await check(`text and input borders meet WCAG contrast (${scheme} mode)`, async () => {
+    await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] });
+    const all = [];
+    for (const p of ['/', '/calculators/', '/about/', '/privacy/', '/paint-calculator/', '/concrete-calculator/', '/storage-calculator/']) {
+      await open(p);
+      for (const f of await page.eval(CONTRAST)) all.push(`${p} ${f}`);
+    }
+    // Error state too: red text on the tinted field background
+    await page.eval(js.set('photos', '-1'));
+    for (const f of await page.eval(CONTRAST)) all.push(`error state ${f}`);
+    await page.send('Emulation.setEmulatedMedia', { features: [] });
+    eq(all.length, 0, `contrast failures:\n${all.slice(0, 15).join('\n')}`);
+  });
+}
+
+await check('keyboard focus is visible on both US/Metric segments', async () => {
+  await open('/paint-calculator/');
+  for (const id of ['sys-us', 'sys-metric']) {
+    const shadow = await page.eval(`(() => { const r = document.getElementById('${id}'); r.focus({ focusVisible: true }); return getComputedStyle(r.nextElementSibling).boxShadow; })()`);
+    expect(shadow && shadow !== 'none', `${id}: no focus ring (${shadow})`);
+  }
+});
+
 await check('skip link is the first thing keyboard users reach', async () => {
   await open('/paint-calculator/');
   await page.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
