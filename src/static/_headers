@@ -1,8 +1,16 @@
 # Response headers for Cloudflare Workers static assets.
-# If ads are added later, the Content-Security-Policy must allow the ad network's domains.
+# The site itself loads nothing from other domains. Ads run only inside the /ads/* frame pages,
+# which are embedded in sandboxed iframes and get their own, looser policy below.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+
+/ads/*
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src https: data:; media-src https:; font-src https: data:; frame-src https:; connect-src https:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'
+  X-Robots-Tag: noindex

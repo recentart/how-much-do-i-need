@@ -7,7 +7,7 @@ import { mkdirSync, rmSync, writeFileSync, readFileSync, cpSync, readdirSync } f
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
-import { SITE } from '../src/site.config.mjs';
+import { SITE, ADS, adUnitReady } from '../src/site.config.mjs';
 import { CALCULATORS } from '../src/calculators/index.mjs';
 import { run, defaultRaw } from '../src/lib/validate.mjs';
 import * as T from '../src/pages/templates.mjs';
@@ -17,7 +17,7 @@ const SRC = path.join(ROOT, 'src');
 
 // Browser modules copied as-is. The calculators import ../lib/*.mjs, which keeps working
 // because the same relative layout is recreated under /assets/js/.
-const BROWSER_LIB = ['units.mjs', 'validate.mjs', 'render.mjs', 'engine.mjs', 'search.mjs'];
+const BROWSER_LIB = ['units.mjs', 'validate.mjs', 'render.mjs', 'engine.mjs', 'search.mjs', 'ads.mjs'];
 
 function write(outDir, rel, content) {
   const file = path.join(outDir, rel);
@@ -43,7 +43,41 @@ function checkMeta(pages) {
   return problems;
 }
 
-export function build({ outDir = path.join(ROOT, 'dist'), quiet = false } = {}) {
+const attrEsc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+// One tiny page per configured ad unit. The calculator pages embed these in sandboxed iframes,
+// and _headers gives /ads/* its own Content-Security-Policy so the ad network's code can run there.
+function writeAdFrames(outDir, ads) {
+  const ready = Object.entries(ads.units).filter(([, u]) => adUnitReady(u));
+  if (!ready.length) return;
+  write(outDir, 'ads/frame.css', 'html,body{margin:0;padding:0;overflow:hidden;background:transparent}\n');
+  for (const [id, u] of ready) {
+    const options = { key: u.key, format: 'iframe', height: u.height, width: u.width, params: {} };
+    write(outDir, `ads/${id}.js`, `window.atOptions = ${JSON.stringify(options)};\n`);
+    write(
+      outDir,
+      `ads/${id}.html`,
+      [
+        '<!doctype html>',
+        '<html lang="en">',
+        '<head>',
+        '<meta charset="utf-8">',
+        '<meta name="robots" content="noindex">',
+        '<title>Advertisement</title>',
+        '<link rel="stylesheet" href="/ads/frame.css">',
+        '</head>',
+        '<body>',
+        `<script src="/ads/${id}.js"></script>`,
+        `<script src="${attrEsc(u.src)}"></script>`,
+        '</body>',
+        '</html>',
+        '',
+      ].join('\n'),
+    );
+  }
+}
+
+export function build({ outDir = path.join(ROOT, 'dist'), quiet = false, ads = ADS } = {}) {
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
@@ -63,7 +97,9 @@ export function build({ outDir = path.join(ROOT, 'dist'), quiet = false } = {}) 
   const ctx = {
     stylesheet: `/assets/css/styles.css?v=${createHash('sha256').update(css).digest('hex').slice(0, 10)}`,
     siteScript: '/assets/js/lib/search.mjs',
+    ads,
   };
+  writeAdFrames(outDir, ads);
 
   const pages = [];
   const extract = (html, re) => (html.match(re) || [])[1] || '';

@@ -1,6 +1,6 @@
 // Page templates. Plain functions that return HTML strings; the build writes them to dist/.
 
-import { SITE, ADS } from '../site.config.mjs';
+import { SITE, ADS, adsEnabled, adUnitReady } from '../site.config.mjs';
 import { CATEGORIES, CALCULATORS } from '../calculators/index.mjs';
 import { esc, renderForm, renderResult } from '../lib/render.mjs';
 
@@ -50,10 +50,32 @@ export function icon(id, cls = 'icon') {
   return `<svg class="${cls}" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${body}</svg>`;
 }
 
-// Ad slots render nothing until ADS.enabled is switched on in site.config.mjs.
-export function adSlot(name) {
-  if (!ADS.enabled || !ADS.slots[name]) return '';
-  return `<aside class="ad-slot ad-slot--${name}" aria-label="Advertisement">${ADS.slots[name]}</aside>`;
+// An ad slot: an empty, hidden box that ads.mjs fills with a sandboxed frame once the visitor's
+// ad choice allows it. Renders nothing while no ad unit is configured (see site.config.mjs).
+export function adSlot(name, ads = ADS) {
+  const slot = adsEnabled(ads) && ads.slots[name];
+  if (!slot) return '';
+  const units = slot.units
+    .filter((id) => adUnitReady(ads.units[id]))
+    .map((id) => ({ frame: `/ads/${id}.html`, width: ads.units[id].width, height: ads.units[id].height }));
+  if (!units.length) return '';
+  const min = slot.minViewport ? ` data-min-viewport="${slot.minViewport}"` : '';
+  return `<aside class="ad-slot ad-slot--${name}" data-ad-slot="${name}" data-ad-units="${esc(JSON.stringify(units))}"${min} aria-label="Advertisement" hidden>
+  <p class="ad-label" aria-hidden="true">Advertisement</p>
+  <div class="ad-frame"></div>
+</aside>`;
+}
+
+function adConsentBar(ads) {
+  return `<div id="ad-consent" class="ad-consent" role="region" aria-label="Ad choices" hidden>
+  <div class="container ad-consent-inner">
+    <p>This site is free thanks to a few small ads. Our ad partner, ${esc(ads.network)}, may use cookies to show and measure them. <a href="/privacy/#ads">Learn more</a></p>
+    <div class="ad-consent-actions">
+      <button type="button" class="button button--small" data-ad-consent="yes">Allow ads</button>
+      <button type="button" class="button button--secondary button--small" data-ad-consent="no">No thanks</button>
+    </div>
+  </div>
+</div>`;
 }
 
 function jsonLdTag(data) {
@@ -61,7 +83,9 @@ function jsonLdTag(data) {
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
 }
 
-export function layout({ title, description, path, body, jsonLd = [], scripts = [], preload = [], current = '', noindex = false, stylesheet }) {
+export function layout({ title, description, path, body, jsonLd = [], scripts = [], preload = [], current = '', noindex = false, stylesheet, ads = ADS }) {
+  const withAds = adsEnabled(ads);
+  if (withAds) scripts = [...scripts, '/assets/js/lib/ads.mjs'];
   const url = pageUrl(path);
   const year = new Date().getUTCFullYear();
   const navLink = (href, label) =>
@@ -123,12 +147,14 @@ ${body}
         <li><a href="/about/">About</a></li>
         <li><a href="/privacy/">Privacy</a></li>
         <li><a href="${SITE.repo}">Source code</a></li>
+        ${withAds ? '<li><button type="button" class="footer-button" data-ad-choices hidden>Ad choices</button></li>' : ''}
       </ul>
     </nav>
     <p>Every calculation runs in your browser. Nothing you enter is sent anywhere.</p>
     <p>Results are estimates. Check quantities with your supplier or installer before you buy. © ${year} How Much Do I Need?</p>
   </div>
 </footer>
+${withAds ? adConsentBar(ads) : ''}
 </body>
 </html>
 `;
@@ -203,7 +229,9 @@ export function homePage(ctx) {
     <ul class="feature-list">
       <li><h3>Standard formulas</h3><p>Every calculator uses the same area and volume formulas a builder or supplier would use, and shows each step with your numbers.</p></li>
       <li><h3>Exact amount and amount to buy</h3><p>You see the mathematical quantity separately from the amount to buy, which adds an adjustable allowance for waste and rounds up to real product sizes.</p></li>
-      <li><h3>Private and fast</h3><p>No accounts, no tracking and no ads. Calculations happen on your device and keep working even if you lose your connection.</p></li>
+      <li><h3>Private and fast</h3><p>${adsEnabled(ctx.ads)
+        ? 'No accounts or sign-ups. Calculations happen on your device, nothing you type is sent anywhere, and pages keep working even if you lose your connection.'
+        : 'No accounts, no tracking and no ads. Calculations happen on your device and keep working even if you lose your connection.'}</p></li>
     </ul>
   </section>
 </div>`;
@@ -216,6 +244,7 @@ export function homePage(ctx) {
     current: '/',
     scripts: [ctx.siteScript],
     stylesheet: ctx.stylesheet,
+    ads: ctx.ads,
     jsonLd: [
       {
         '@context': 'https://schema.org',
@@ -256,6 +285,7 @@ export function allCalculatorsPage(ctx) {
     current: '/calculators/',
     scripts: [ctx.siteScript],
     stylesheet: ctx.stylesheet,
+    ads: ctx.ads,
     jsonLd: [
       breadcrumbLd([
         ['Home', '/'],
@@ -278,8 +308,6 @@ export function calculatorPage(def, ctx) {
       ${sec.html}
     </section>`,
   );
-  // An in-content ad slot sits after the second explanatory section (renders nothing while ads are off).
-  sections.splice(2, 0, adSlot('in-content'));
 
   const body = `
 <div class="container page">
@@ -306,7 +334,7 @@ export function calculatorPage(def, ctx) {
         </section>
       </div>
       <section id="print-summary" class="print-summary" aria-hidden="true"></section>
-      ${adSlot('below-result')}
+      ${adSlot('below-result', ctx.ads)}
       <article class="calc-content" aria-label="About this calculator">
         ${sections.join('\n')}
       </article>
@@ -322,7 +350,7 @@ export function calculatorPage(def, ctx) {
         <h2>Private by design</h2>
         <p>This calculator runs entirely in your browser. The numbers you enter are never sent anywhere or saved.</p>
       </section>
-      ${adSlot('sidebar')}
+      ${adSlot('sidebar', ctx.ads)}
     </aside>
   </div>
 </div>`;
@@ -333,6 +361,7 @@ export function calculatorPage(def, ctx) {
     path: calcPath(def),
     body,
     stylesheet: ctx.stylesheet,
+    ads: ctx.ads,
     scripts: [ctx.entry],
     preload: ctx.preload,
     jsonLd: [
@@ -371,6 +400,7 @@ function simplePage({ ctx, path, title, description, h1, crumb, bodyHtml, curren
     body,
     current,
     stylesheet: ctx.stylesheet,
+    ads: ctx.ads,
     jsonLd: [breadcrumbLd([['Home', '/'], [crumb, path]])],
   });
 }
@@ -398,13 +428,64 @@ export function aboutPage(ctx) {
 <p>The arithmetic is exact, and unit conversions use the official definitions (for example, 1 inch = 2.54 cm and 1 US gallon = 3.785411784 litres). The answer can only be as good as the inputs, though, and real jobs vary. Paint coverage depends on the surface, gravel weight depends on the stone, and every room has its awkward corners. That's why the extras for waste are adjustable and explained, and why each page says what could change the result.</p>
 <p>Use the results to plan and budget, then check final quantities with your supplier, manufacturer or installer. For structural work such as foundations and load-bearing slabs, follow a professional's specification and your local building codes.</p>
 <h2>Private by design</h2>
-<p>There are no accounts, no cookies, no analytics and no tracking. The site is a set of static pages, and every calculation happens in your browser. Once a page has loaded, it keeps working even if you go offline. See the <a href="/privacy/">privacy policy</a> for details.</p>
+${adsEnabled(ctx.ads)
+  ? `<p>There are no accounts and no analytics, and nothing you type ever leaves your device. The site is a set of static pages, and every calculation happens in your browser. Once a page has loaded, it keeps working even if you go offline.</p>
+<p>A few small ads from ${esc(ctx.ads.network)} keep the site free. They load in a separate, sealed-off frame that can't see the calculator, and they may use cookies. The <a href="/privacy/#ads">privacy policy</a> explains what that means and how to turn them off.</p>`
+  : `<p>There are no accounts, no cookies, no analytics and no tracking. The site is a set of static pages, and every calculation happens in your browser. Once a page has loaded, it keeps working even if you go offline. See the <a href="/privacy/">privacy policy</a> for details.</p>`}
 <h2>Feedback and source code</h2>
 <p>The site's source code is public on <a href="${SITE.repo}">GitHub</a>. If you spot a mistake in a formula, or there's a calculator you would find useful, please <a href="${SITE.repo}/issues">open an issue</a> there.</p>`,
   });
 }
 
 export function privacyPage(ctx) {
+  return adsEnabled(ctx.ads) ? privacyWithAds(ctx) : privacyNoAds(ctx);
+}
+
+function privacyWithAds(ctx) {
+  const ads = ctx.ads;
+  const net = esc(ads.network);
+  return simplePage({
+    ctx,
+    path: '/privacy/',
+    title: 'Privacy Policy | How Much Do I Need?',
+    description:
+      'What you enter in How Much Do I Need? stays on your device. How the ads on the site use cookies, and how to turn them off.',
+    h1: 'Privacy policy',
+    crumb: 'Privacy',
+    bodyHtml: `
+<p class="lead">In short: what you type into a calculator never leaves your device, and this site doesn't collect personal information itself. A few small ads from ${net} pay for the site, and they may use cookies.</p>
+<p><em>Last updated: ${esc(ads.privacyUpdated)}</em></p>
+<h2>What you enter stays on your device</h2>
+<p>All calculations run in your web browser. Measurements and other numbers you type into a calculator are never sent to a server, stored or logged by this site. The ads can't see them either (see below).</p>
+<h2>No accounts or analytics</h2>
+<ul>
+  <li>There are no user accounts or sign-ups.</li>
+  <li>The site itself sets no cookies.</li>
+  <li>There are no analytics, tracking pixels or social media widgets.</li>
+  <li>Apart from the ads, every file the site uses, including fonts, comes from this site.</li>
+</ul>
+<h2 id="ads">Advertising</h2>
+<p>The site shows at most two small ads on a calculator page, provided by ${net}. There are no pop-ups, no redirects and no ads between the form and your result.</p>
+<ul>
+  <li><strong>Sealed off from the page.</strong> Each ad loads in its own small frame. That frame is isolated from the calculator: it can't read what you type or what is saved in your browser for this site, and it can't take you to another page unless you click the ad.</li>
+  <li><strong>What the ad network receives.</strong> When an ad loads, your browser contacts ${net} and the advertisers it works with. As with any website you visit, they receive technical information such as your IP address, browser and device type, and the address of the page. They may set or read cookies to choose ads, limit how often you see the same one, count views and clicks, and prevent fraud. That is covered by <a href="${esc(ads.privacyUrl)}">${net}'s privacy policy</a>.</li>
+  <li><strong>Only when visible.</strong> Ads load only when they scroll near the screen.</li>
+</ul>
+<h2 id="ad-choices">Your choice</h2>
+<p>If your device's time zone is in the European Union, the EEA, the UK or Switzerland, no ads load until you choose <strong>Allow ads</strong> in the bar at the bottom of the page.</p>
+<p>Anyone, anywhere, can change their choice at any time with <strong>Ad choices</strong> at the bottom of every page. Choosing <strong>No thanks</strong> stops ads loading on this site in that browser. Ad blockers work too, and the calculators work exactly the same without ads.</p>
+<h2>What is saved in your browser</h2>
+<p>Two settings are remembered in your browser's local storage: whether you last used US or metric units, so the next calculator opens the same way, and your ad choice, if you make one. They are stored only on your device and are never sent to us. You can remove them at any time by clearing this site's data in your browser settings.</p>
+<h2>Hosting</h2>
+<p>The site is hosted on Cloudflare. Like any web host, Cloudflare processes technical information such as IP addresses when delivering pages, for example to keep the service secure and reliable. That processing is covered by <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>. This site doesn't use that information to identify or profile visitors.</p>
+<h2>Changes to this policy</h2>
+<p>If anything changes how data is handled, this page will be updated before that change goes live.</p>
+<h2>Contact</h2>
+<p>Questions about privacy can be raised by <a href="${SITE.repo}/issues">opening an issue on GitHub</a>.</p>`,
+  });
+}
+
+function privacyNoAds(ctx) {
   return simplePage({
     ctx,
     path: '/privacy/',
@@ -451,5 +532,6 @@ export function notFoundPage(ctx) {
     body,
     noindex: true,
     stylesheet: ctx.stylesheet,
+    ads: ctx.ads,
   });
 }

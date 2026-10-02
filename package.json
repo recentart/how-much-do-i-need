@@ -11,7 +11,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test \"test/*.test.mjs\"",
-    "test:e2e": "node scripts/build.mjs && node test/e2e/run.mjs",
+    "test:e2e": "node scripts/build.mjs && node test/e2e/run.mjs && node test/e2e/ads.mjs",
     "serve": "node scripts/build.mjs && node scripts/serve.mjs",
     "images": "node scripts/make-images.mjs",
     "deploy": "npx wrangler deploy"

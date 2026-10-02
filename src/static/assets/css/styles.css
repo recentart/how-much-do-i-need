@@ -600,7 +600,7 @@ main:focus {
 
 @media (min-width: 1100px) {
   .page-grid {
-    grid-template-columns: minmax(0, 1fr) 280px;
+    grid-template-columns: minmax(0, 1fr) 300px;
     align-items: start;
   }
 }
@@ -1082,20 +1082,101 @@ select.input {
   color: var(--accent-ink);
 }
 
-/* Reserved for future ads: fixed minimum heights so an ad loading later doesn't shift the page. */
+/* ---------- Ads ---------- */
+/* Slots stay hidden until the visitor's ad choice allows ads, and collapsed (no label, no height)
+   until they scroll near the screen. See src/lib/ads.mjs. */
+
 .ad-slot {
-  display: block;
   margin: 24px 0;
   text-align: center;
 }
 
-.ad-slot--below-result,
-.ad-slot--in-content {
-  min-height: 250px;
+.ad-slot--sidebar {
+  margin: 0;
 }
 
-.ad-slot--sidebar {
-  min-height: 600px;
+.ad-slot--pending {
+  margin: 0;
+}
+
+.ad-slot--pending .ad-label {
+  display: none;
+}
+
+.ad-label {
+  margin: 0 0 4px;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ad-frame {
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ad-frame iframe {
+  display: block;
+  max-width: 100%;
+  border: 0;
+}
+
+.footer-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.ad-consent {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  padding: 10px 0;
+  background: var(--surface);
+  border-top: 1px solid var(--line-strong);
+  box-shadow: 0 -4px 16px rgb(0 0 0 / 0.08);
+  font-size: 0.875rem;
+}
+
+.ad-consent-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.ad-consent p {
+  flex: 1 1 320px;
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.ad-consent-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.button--small {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 0.875rem;
+}
+
+@media print {
+  .ad-slot,
+  .ad-consent {
+    display: none !important;
+  }
 }
 
 .calc-grid--compact {

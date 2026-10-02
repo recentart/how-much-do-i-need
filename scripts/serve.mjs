@@ -28,12 +28,50 @@ const isFile = (f) => {
   }
 };
 
+// Parses _headers the way Cloudflare does: rules apply in order, a later rule adds headers, and
+// "! Name" removes a header set by an earlier rule. Only "*" wildcards are supported.
+export function parseHeaders(text) {
+  const rules = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim() || line.trim().startsWith('#')) continue;
+    if (!/^\s/.test(line)) {
+      const re = new RegExp(`^${line.trim().replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
+      rules.push({ re, set: [], detach: [] });
+    } else if (rules.length) {
+      const t = line.trim();
+      if (t.startsWith('!')) rules.at(-1).detach.push(t.slice(1).trim().toLowerCase());
+      else {
+        const i = t.indexOf(':');
+        rules.at(-1).set.push([t.slice(0, i).trim(), t.slice(i + 1).trim()]);
+      }
+    }
+  }
+  return (pathname) => {
+    const out = new Map();
+    for (const r of rules) {
+      if (!r.re.test(pathname)) continue;
+      for (const d of r.detach) out.delete(d);
+      for (const [k, v] of r.set) {
+        const prev = out.get(k.toLowerCase());
+        out.set(k.toLowerCase(), prev ? [prev[0], `${prev[1]}, ${v}`] : [k, v]);
+      }
+    }
+    return Object.fromEntries([...out.values()]);
+  };
+}
+
 export function createStaticServer(dir) {
+  let headersFor = () => ({});
+  try {
+    headersFor = parseHeaders(readFileSync(path.join(dir, '_headers'), 'utf8'));
+  } catch {
+    // No _headers file: serve without extra headers.
+  }
   return http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const pathname = decodeURIComponent(url.pathname);
     const send = (file, status) => {
-      res.writeHead(status, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
+      res.writeHead(status, { ...headersFor(pathname), 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
       res.end(readFileSync(file));
     };
     if (pathname.includes('..') || pathname.includes('\0')) {
