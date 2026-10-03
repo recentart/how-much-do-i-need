@@ -7,7 +7,7 @@ import { mkdtempSync, rmSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { build } from '../scripts/build.mjs';
-import { SITE } from '../src/site.config.mjs';
+import { SITE, ADS } from '../src/site.config.mjs';
 import { CALCULATORS } from '../src/calculators/index.mjs';
 
 let out;
@@ -138,12 +138,13 @@ test('404 page is not indexed and has no canonical', () => {
   assert.ok(!/rel="canonical"/.test(h));
 });
 
-test('no ads, trackers or third-party requests', () => {
+// Ads run only inside the sandboxed /ads/* frame pages (see ads.test.mjs); the pages themselves
+// load nothing from other domains.
+test('no trackers or third-party requests on the pages themselves', () => {
   for (const p of pages) {
     const h = html[p];
-    assert.ok(!/class="ad-slot/.test(h), `${p} renders an ad slot`);
     for (const m of h.matchAll(/(?:src|href)="(https?:\/\/[^"]+)"/g)) {
-      const allowed = m[1].startsWith(SITE.url) || m[1].startsWith(SITE.repo) || m[1].startsWith('https://www.cloudflare.com/privacypolicy');
+      const allowed = m[1].startsWith(SITE.url) || m[1].startsWith(SITE.repo) || m[1].startsWith('https://www.cloudflare.com/privacypolicy') || m[1] === ADS.privacyUrl;
       assert.ok(allowed, `${p} references external ${m[1]}`);
     }
     assert.ok(!/<script[^>]+src="https?:/.test(h), `${p} loads a third-party script`);

@@ -39,8 +39,14 @@ test('the widest unit that fits is chosen, or none', () => {
   assert.equal(pickUnit(units, 288), null);
 });
 
-test('the live config has no ad units yet, so nothing ad-related is built', () => {
-  assert.equal(adsEnabled(ADS), false);
+test('the live config is on, and every filled-in unit is complete', () => {
+  assert.equal(adsEnabled(ADS), true);
+  for (const [id, u] of Object.entries(ADS.units)) {
+    if (!u.key && !u.src) continue;
+    assert.match(u.src, /^https:\/\/[^/]+\/.+/, `${id}: script URL`);
+    assert.match(u.key, /^[0-9a-f]{32}$/, `${id}: key`);
+    assert.ok(u.src.includes(u.key), `${id}: script URL doesn't match its key`);
+  }
 });
 
 let out;
